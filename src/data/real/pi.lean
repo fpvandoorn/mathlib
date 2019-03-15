@@ -283,7 +283,6 @@ begin
   apply pow_ne_zero, norm_num, norm_num
 end
 
-set_option profiler true
 lemma pi_gt_three : pi > 3 :=
 begin
   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series 1), rw [mul_comm],
@@ -365,25 +364,25 @@ end
 --   all_goals {norm_num}
 -- end
 
--- the following lemma takes about 14 seconds
-lemma pi_lt_3141593 : pi < 3.141593 :=
-begin
-  refine lt_of_lt_of_le (pi_lt_sqrt_two_add_series 11) _,
-  apply add_le_of_le_sub_right, rw [mul_comm], apply mul_le_of_le_div, apply pow_pos, norm_num,
-  rw [sqrt_le_left, sub_le], swap, norm_num,
-  apply sqrt_two_add_series_step_down (10199321/5099662),
-  apply sqrt_two_add_series_step_down (8499428/4249719),
-  apply sqrt_two_add_series_step_down (5524612/2762319),
-  apply sqrt_two_add_series_step_down (5683909/2842008),
-  apply sqrt_two_add_series_step_down (4209613/2104965),
-  apply sqrt_two_add_series_step_down (4663559/2332482),
-  apply sqrt_two_add_series_step_down (7453587/3731288),
-  apply sqrt_two_add_series_step_down (258754/130003),
-  apply sqrt_two_add_series_step_down (49359/25163),
-  apply sqrt_two_add_series_step_down (56935/30813),
-  apply sqrt_two_add_series_step_down (27720/19601),
-  all_goals {norm_num}
-end
+-- the following lemma takes about 19 seconds
+-- lemma pi_lt_3141593 : pi < 3.141593 :=
+-- begin
+--   refine lt_of_lt_of_le (pi_lt_sqrt_two_add_series 11) _,
+--   apply add_le_of_le_sub_right, rw [mul_comm], apply mul_le_of_le_div, apply pow_pos, norm_num,
+--   rw [sqrt_le_left, sub_le], swap, norm_num,
+--   apply sqrt_two_add_series_step_down (27720/19601),
+--   apply sqrt_two_add_series_step_down (56935/30813),
+--   apply sqrt_two_add_series_step_down (49359/25163),
+--   apply sqrt_two_add_series_step_down (258754/130003),
+--   apply sqrt_two_add_series_step_down (113599/56868),
+--   apply sqrt_two_add_series_step_down (1101994/551163),
+--   apply sqrt_two_add_series_step_down (8671537/4336095),
+--   apply sqrt_two_add_series_step_down (3877807/1938940),
+--   apply sqrt_two_add_series_step_down (52483813/26242030),
+--   apply sqrt_two_add_series_step_down (56946167/28473117),
+--   apply sqrt_two_add_series_step_down (23798415/11899211),
+--   all_goals {norm_num},
+-- end
 
 
 end real
