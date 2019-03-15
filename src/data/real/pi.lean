@@ -68,23 +68,17 @@ lemma sin_square : sin x ^ 2 = 1 - cos x ^ 2 :=
 by { rw [←sin_pow_two_add_cos_pow_two x], simp }
 
 /-- the series `sqrt_two_add_series x n` is `sqrt(2 + sqrt(2 + ... ))` with `n` square roots,
-  starting with `x`. -/
+  starting with `x`. We define it here because `cos (pi / 2 ^ (n+1)) = sqrt_two_add_series 0 n / 2`
+-/
 @[simp] noncomputable def sqrt_two_add_series (x : ℝ) : ℕ → ℝ
 | 0     := x
 | (n+1) := sqrt (2 + sqrt_two_add_series n)
 
-lemma sqrt_two_add_series_zero : sqrt_two_add_series x 0 = x :=
-by simp only [sqrt_two_add_series]
+lemma sqrt_two_add_series_zero : sqrt_two_add_series x 0 = x := by simp
 
-lemma sqrt_two_add_series_one : sqrt_two_add_series 0 1 = sqrt 2 :=
-by simp [sqrt_two_add_series]
+lemma sqrt_two_add_series_one : sqrt_two_add_series 0 1 = sqrt 2 := by simp
 
-lemma sqrt_two_add_series_two : sqrt_two_add_series 0 2 = sqrt (2 + sqrt 2) :=
-by simp only [sqrt_two_add_series, sqrt_two_add_series_one]
-
-lemma sqrt_two_add_series_three :
-  sqrt_two_add_series 0 3 = sqrt (2 + sqrt (2 + sqrt 2)) :=
-by simp only [sqrt_two_add_series, sqrt_two_add_series_two]
+lemma sqrt_two_add_series_two : sqrt_two_add_series 0 2 = sqrt (2 + sqrt 2) := by simp
 
 lemma sqrt_two_add_series_zero_nonneg : ∀(n : ℕ), sqrt_two_add_series 0 n ≥ 0
 | 0     := le_refl 0
@@ -202,14 +196,6 @@ by { transitivity cos (pi / 2 ^ 5), congr, norm_num, simp }
 
 lemma sin_pi_div_thirty_two : sin (pi / 32) = sqrt (2 - sqrt (2 + sqrt (2 + sqrt 2))) / 2 :=
 by { transitivity sin (pi / 2 ^ 5), congr, norm_num, simp }
-
-lemma cos_pi_div_sixty_four :
-  cos (pi / 64) = sqrt (2 + sqrt (2 + sqrt (2 + sqrt (2 + sqrt 2)))) / 2 :=
-by { transitivity cos (pi / 2 ^ 6), congr, norm_num, simp }
-
-lemma sin_pi_div_sixty_four :
-  sin (pi / 64) = sqrt (2 - sqrt (2 + sqrt (2 + sqrt (2 + sqrt 2)))) / 2 :=
-by { transitivity sin (pi / 2 ^ 6), congr, norm_num, simp }
 
 lemma sin_lt {x : ℝ} (h : 0 < x) : sin x < x :=
 begin
