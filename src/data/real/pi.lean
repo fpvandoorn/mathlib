@@ -119,15 +119,15 @@ lemma sqrt_two_add_series_monotone_left {x y : ℝ} (h : x ≤ y) :
     apply sqrt_le_sqrt, apply add_le_add_left, apply sqrt_two_add_series_monotone_left
   end
 
-lemma sqrt_two_add_series_step_up {x z : ℝ} {n : ℕ} (y : ℝ) (h : 2 + x ≤ y ^ 2)
-  (h2 : 0 ≤ y) (hz : sqrt_two_add_series y n ≤ z) : sqrt_two_add_series x (n+1) ≤ z :=
+lemma sqrt_two_add_series_step_up {x z : ℝ} {n : ℕ} (y : ℝ) (hz : sqrt_two_add_series y n ≤ z)
+  (h : 2 + x ≤ y ^ 2) (h2 : 0 ≤ y) : sqrt_two_add_series x (n+1) ≤ z :=
 begin
   refine le_trans _ hz, rw [sqrt_two_add_series_succ], apply sqrt_two_add_series_monotone_left,
   rw [sqrt_le_left], exact h, exact h2
 end
 
-lemma sqrt_two_add_series_step_down {x z : ℝ} {n : ℕ} (y : ℝ) (h : y ^ 2 ≤ 2 + x)
-  (hz : z ≤ sqrt_two_add_series y n) : z ≤ sqrt_two_add_series x (n+1) :=
+lemma sqrt_two_add_series_step_down {x z : ℝ} {n : ℕ} (y : ℝ) (hz : z ≤ sqrt_two_add_series y n)
+  (h : y ^ 2 ≤ 2 + x) : z ≤ sqrt_two_add_series x (n+1) :=
 begin
   apply le_trans hz, rw [sqrt_two_add_series_succ],
   apply sqrt_two_add_series_monotone_left, exact le_sqrt_of_sqr_le h
@@ -283,23 +283,24 @@ begin
   apply pow_ne_zero, norm_num, norm_num
 end
 
+set_option profiler true
 lemma pi_gt_three : pi > 3 :=
 begin
   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series 1), rw [mul_comm],
   apply le_mul_of_div_le, norm_num, apply le_sqrt_of_sqr_le, rw [le_sub],
-  refine sqrt_two_add_series_step_up (23/16) (by norm_num) (by norm_num) _,
-  norm_num
+  apply sqrt_two_add_series_step_up (23/16),
+  all_goals {norm_num}
 end
 
 lemma pi_gt_314 : pi > 3.14 :=
 begin
   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series 4), rw [mul_comm],
   apply le_mul_of_div_le, norm_num, apply le_sqrt_of_sqr_le, rw [le_sub],
-  refine sqrt_two_add_series_step_up (99/70)    (by norm_num) (by norm_num) _,
-  refine sqrt_two_add_series_step_up (874/473)  (by norm_num) (by norm_num) _,
-  refine sqrt_two_add_series_step_up (1940/989) (by norm_num) (by norm_num) _,
-  refine sqrt_two_add_series_step_up (1447/727) (by norm_num) (by norm_num) _,
-  norm_num
+  apply sqrt_two_add_series_step_up (99/70),
+  apply sqrt_two_add_series_step_up (874/473),
+  apply sqrt_two_add_series_step_up (1940/989),
+  apply sqrt_two_add_series_step_up (1447/727),
+  all_goals {norm_num}
 end
 
 lemma pi_lt_315 : pi < 3.15 :=
@@ -307,46 +308,44 @@ begin
   refine lt_of_lt_of_le (pi_lt_sqrt_two_add_series 4) _,
   apply add_le_of_le_sub_right, rw [mul_comm], apply mul_le_of_le_div, apply pow_pos, norm_num,
   rw [sqrt_le_left, sub_le], swap, norm_num,
-  refine sqrt_two_add_series_step_down (140/99)  (by norm_num) _,
-  refine sqrt_two_add_series_step_down (279/151) (by norm_num) _,
-  refine sqrt_two_add_series_step_down (51/26)   (by norm_num) _,
-  refine sqrt_two_add_series_step_down (412/207) (by norm_num) _,
-  norm_num
+  apply sqrt_two_add_series_step_down (140/99) ,
+  apply sqrt_two_add_series_step_down (279/151),
+  apply sqrt_two_add_series_step_down (51/26)  ,
+  apply sqrt_two_add_series_step_down (412/207),
+  all_goals {norm_num}
 end
 
--- set_option profiler true
--- -- the following lemma takes about 9 seconds
--- lemma pi_gt_31415 : pi > 3.1415 :=
--- begin
---   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series 6), rw [mul_comm],
---   apply le_mul_of_div_le, norm_num, apply le_sqrt_of_sqr_le, rw [le_sub],
---   refine sqrt_two_add_series_step_up (11482/8119)  (by norm_num) (by norm_num) _,
---   refine sqrt_two_add_series_step_up (5401/2923)   (by norm_num) (by norm_num) _,
---   refine sqrt_two_add_series_step_up (2348/1197)   (by norm_num) (by norm_num) _,
---   refine sqrt_two_add_series_step_up (11367/5711)  (by norm_num) (by norm_num) _,
---   refine sqrt_two_add_series_step_up (25705/12868) (by norm_num) (by norm_num) _,
---   refine sqrt_two_add_series_step_up (23235/11621) (by norm_num) (by norm_num) _,
---   norm_num
--- end
+-- the following lemma takes about 9 seconds
+lemma pi_gt_31415 : pi > 3.1415 :=
+begin
+  refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series 6), rw [mul_comm],
+  apply le_mul_of_div_le, norm_num, apply le_sqrt_of_sqr_le, rw [le_sub],
+  apply sqrt_two_add_series_step_up (11482/8119),
+  apply sqrt_two_add_series_step_up (5401/2923),
+  apply sqrt_two_add_series_step_up (2348/1197),
+  apply sqrt_two_add_series_step_up (11367/5711),
+  apply sqrt_two_add_series_step_up (25705/12868),
+  apply sqrt_two_add_series_step_up (23235/11621),
+  all_goals {norm_num}
+end
 
--- -- the following lemma takes about 14 seconds
--- lemma pi_lt_31416 : pi < 3.1416 :=
--- begin
---   refine lt_of_lt_of_le (pi_lt_sqrt_two_add_series 9) _,
---   apply add_le_of_le_sub_right, rw [mul_comm], apply mul_le_of_le_div, apply pow_pos, norm_num,
---   rw [sqrt_le_left, sub_le], swap, norm_num,
---   refine sqrt_two_add_series_step_down (4756/3363)     (by norm_num) _,
---   refine sqrt_two_add_series_step_down (101211/54775)  (by norm_num) _,
---   refine sqrt_two_add_series_step_down (505534/257719) (by norm_num) _,
---   refine sqrt_two_add_series_step_down (83289/41846)   (by norm_num) _,
---   refine sqrt_two_add_series_step_down (411278/205887) (by norm_num) _,
---   refine sqrt_two_add_series_step_down (438142/219137) (by norm_num) _,
---   refine sqrt_two_add_series_step_down (451504/225769) (by norm_num) _,
---   refine sqrt_two_add_series_step_down (265603/132804) (by norm_num) _,
---   refine sqrt_two_add_series_step_down (849938/424971) (by norm_num) _,
---   norm_num
--- end
-
+-- the following lemma takes about 14 seconds
+lemma pi_lt_31416 : pi < 3.1416 :=
+begin
+  refine lt_of_lt_of_le (pi_lt_sqrt_two_add_series 9) _,
+  apply add_le_of_le_sub_right, rw [mul_comm], apply mul_le_of_le_div, apply pow_pos, norm_num,
+  rw [sqrt_le_left, sub_le], swap, norm_num,
+  apply sqrt_two_add_series_step_down (4756/3363),
+  apply sqrt_two_add_series_step_down (101211/54775),
+  apply sqrt_two_add_series_step_down (505534/257719),
+  apply sqrt_two_add_series_step_down (83289/41846),
+  apply sqrt_two_add_series_step_down (411278/205887),
+  apply sqrt_two_add_series_step_down (438142/219137),
+  apply sqrt_two_add_series_step_down (451504/225769),
+  apply sqrt_two_add_series_step_down (265603/132804),
+  apply sqrt_two_add_series_step_down (849938/424971),
+  all_goals {norm_num}
+end
 
 end real
 
