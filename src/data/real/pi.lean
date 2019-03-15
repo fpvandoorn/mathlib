@@ -291,8 +291,8 @@ begin
   apply le_mul_of_div_le, norm_num, apply le_sqrt_of_sqr_le, rw [le_sub],
   refine le_trans (sqrt_two_add_series_step_up (577/408) (by norm_num) (by norm_num)) _,
   refine le_trans (sqrt_two_add_series_step_up (619/335) (by norm_num) (by norm_num)) _,
-  refine le_trans (sqrt_two_add_series_step_up (2144/1093) (by norm_num) (by norm_num)) _,
-  refine le_trans (sqrt_two_add_series_step_up (2687/1350) (by norm_num) (by norm_num)) _,
+  refine le_trans (sqrt_two_add_series_step_up (1940/989) (by norm_num) (by norm_num)) _,
+  refine le_trans (sqrt_two_add_series_step_up (1447/727) (by norm_num) (by norm_num)) _,
   norm_num
 end
 
