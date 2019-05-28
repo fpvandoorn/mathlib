@@ -103,6 +103,25 @@ begin
   simp [le_refl, h3, hx],
   simp [le_refl, hy, lt_trans hx h2.2]
 end
+
+/- why is `max_add_add_left` only proven for an instance
+`decidable_linear_ordered_cancel_comm_monoid` that is never used in the library? -/
+lemma nonempty_Ico_sdiff {α} [decidable_linear_ordered_comm_group α] {x dx y dy : α}
+  (h : dy < dx) (hx : 0 < dx) : nonempty ↥(Ico x (x + dx) \ Ico y (y + dy)) :=
+begin
+  cases lt_or_le x y with h' h',
+  { use x, simp* },
+  { use max x (x + dy), simp [*, le_refl] }
+end
+
+@[simp] lemma add_le_self_right {α} [decidable_linear_ordered_comm_group α] {x y : α} :
+  x + y ≤ y ↔ x ≤ 0 :=
+by { conv { to_lhs, to_rhs, rw [←zero_add y] }, rw [add_le_add_iff_right] }
+
+@[simp] lemma add_le_self_left {α} [decidable_linear_ordered_comm_group α] {x y : α} :
+  x + y ≤ x ↔ y ≤ 0 :=
+by { conv { to_lhs, to_rhs, rw [←add_zero x] }, rw [add_le_add_iff_left] }
+
 -- end move
 
 
@@ -171,11 +190,11 @@ by simp [shift_up, cube.tail]
 
 @[simp] lemma head_shift_up (c : cube (n+1)) : c.shift_up.b 0 = c.xm := rfl
 
-def all : cube n :=
+def unit_cube : cube n :=
 ⟨λ _, 0, 1, by norm_num⟩
 
-@[simp] lemma side_all {j : fin n} : cube.all.side j = Ico 0 1 :=
-by norm_num [all, side]
+@[simp] lemma side_unit_cube {j : fin n} : unit_cube.side j = Ico 0 1 :=
+by norm_num [unit_cube, side]
 
 end cube
 open cube
@@ -183,10 +202,9 @@ open cube
 variables {ι : Type} [fintype ι] {cs : ι → cube (n+1)} {i : ι}
 
 /- disjoint family of cubes -/
-
 def correct (cs : ι → cube n) : Prop :=
 pairwise (disjoint on (cube.to_set ∘ cs)) ∧
-(⋃(i : ι), (cs i).to_set) = cube.all.to_set ∧
+(⋃(i : ι), (cs i).to_set) = unit_cube.to_set ∧
 injective (cube.w ∘ cs) ∧
 2 ≤ cardinal.mk ι ∧
 3 ≤ n
@@ -194,11 +212,12 @@ injective (cube.w ∘ cs) ∧
 variable (h : correct cs)
 
 include h
-lemma to_set_subset_all {i} : (cs i).to_set ⊆ cube.all.to_set :=
+lemma to_set_subset_unit_cube {i} : (cs i).to_set ⊆ unit_cube.to_set :=
 by { rw [←h.2.1], exact subset_Union _ i }
 
 lemma side_subset {i j} : (cs i).side j ⊆ Ico 0 1 :=
-by { have := to_set_subset_all h, rw [to_set_subset] at this, convert this j, norm_num [all] }
+by { have := to_set_subset_unit_cube h, rw [to_set_subset] at this,
+     convert this j, norm_num [unit_cube] }
 
 lemma zero_le_of_mem_side {i j x} (hx : x ∈ (cs i).side j) : 0 ≤ x :=
 (side_subset h hx).1
@@ -224,10 +243,8 @@ begin
   { intro j, split,
     transitivity (0 : ℝ),
     { rw [←add_le_add_iff_right (1 : ℝ)], convert b_add_w_le_one h, rw hi, rw zero_add },
-    apply zero_le_b h,
-    apply lt_of_lt_of_le (side_subset h $ (cs i').b_mem_side j).2,
-    rw [←zero_add (1 : ℝ), hi, add_le_add_iff_right],
-    apply zero_le_b h },
+    apply zero_le_b h, apply lt_of_lt_of_le (side_subset h $ (cs i').b_mem_side j).2,
+    simp [hi, zero_le_b h] },
   apply not_disjoint_iff.mpr ⟨p, hp, h2p⟩,
   apply h.1, exact hi'.symm
 end
@@ -236,7 +253,7 @@ lemma shift_up_bottom_subset_bottoms (hc : (cs i).xm ≠ 1) :
   (cs i).shift_up.bottom ⊆ ⋃(i : ι), (cs i).bottom :=
 begin
   intros p hp, cases hp with hp0 hps, rw [tail_shift_up] at hps,
-  have : p ∈ (cube.all : cube (n+1)).to_set,
+  have : p ∈ (unit_cube : cube (n+1)).to_set,
   { simp [to_set, forall_fin_succ, hp0], refine ⟨⟨_, _⟩, _⟩,
     { rw [←zero_add (0 : ℝ)], apply add_le_add, apply zero_le_b h, apply (cs i).hw' },
     { exact lt_of_le_of_ne (b_add_w_le_one h) hc },
@@ -252,8 +269,8 @@ begin
 end
 omit h
 
-/- A valley is a square on which cubes in cs are placed, and none of those cubes can be
-  partially outside the square -/
+/- A valley is a square on which at least two cubes in the family cs are placed,
+  and none of those cubes can be partially outside the square -/
 def valley (cs : ι → cube (n+1)) (c : cube (n+1)) : Prop :=
 c.bottom ⊆ (⋃(i : ι), (cs i).bottom) ∧
 (∀i, (cs i).b 0 = c.b 0 → (∃x, x ∈ (cs i).tail.to_set ∩ c.tail.to_set) →
@@ -262,13 +279,14 @@ c.bottom ⊆ (⋃(i : ι), (cs i).bottom) ∧
 
 variables {c : cube (n+1)} (v : valley cs c)
 
-lemma valley_all (h : correct cs) : valley cs cube.all :=
+/- the bottom of the cube is a valley -/
+lemma valley_unit_cube (h : correct cs) : valley cs unit_cube :=
 begin
   refine ⟨_, _, _⟩,
   { intro v, simp [bottom],
     intros h0 hv,
-    have : v ∈ (cube.all : cube (n+1)).to_set,
-    { dsimp [to_set], rw [forall_fin_succ, h0], split, norm_num [side, all], exact hv },
+    have : v ∈ (unit_cube : cube (n+1)).to_set,
+    { dsimp [to_set], rw [forall_fin_succ, h0], split, norm_num [side, unit_cube], exact hv },
     rw [←h.2.1] at this, rcases this with ⟨_, ⟨i, rfl⟩, hi⟩,
     use i,
     split, { apply le_antisymm, rw h0, exact zero_le_b h, exact (hi 0).1 },
@@ -343,6 +361,7 @@ lemma exists_mi : ∃(i : ι), i ∈ bcubes cs c ∧ ∀(i' ∈ bcubes cs c),
 def mi : ι :=
 classical.some $ exists_mi h v
 
+variables {h v}
 lemma mi_mem_bcubes : mi h v ∈ bcubes cs c :=
 (classical.some_spec $ exists_mi h v).1
 
@@ -351,178 +370,143 @@ lemma mi_minimal (hi : i ∈ bcubes cs c) : (cs $ mi h v).w ≤ (cs i).w :=
 
 lemma mi_strict_minimal (hii' : mi h v ≠ i) (hi : i ∈ bcubes cs c) :
   (cs $ mi h v).w < (cs i).w :=
-by { apply lt_of_le_of_ne (mi_minimal h v hi), apply h.2.2.1.ne, apply hii' }
+by { apply lt_of_le_of_ne (mi_minimal hi), apply h.2.2.1.ne, apply hii' }
 
 lemma mi_xm_ne_one : (cs $ mi h v).xm ≠ 1 :=
 begin
   apply ne_of_lt, rcases (two_le_iff' _).mp (two_le_mk_bcubes h v) with ⟨⟨i, hi⟩, h2i⟩,
-  swap, exact ⟨mi h v, mi_mem_bcubes h v⟩,
+  swap, exact ⟨mi h v, mi_mem_bcubes⟩,
   apply lt_of_lt_of_le _ (b_add_w_le_one h), exact i, exact 0,
-  rw [xm, (mi_mem_bcubes h v).1, hi.1, real.add_lt_add_iff_left],
-  apply mi_strict_minimal h v _ hi, intro h', apply h2i, rw subtype.ext, exact h'
+  rw [xm, mi_mem_bcubes.1, hi.1, real.add_lt_add_iff_left],
+  apply mi_strict_minimal _ hi, intro h', apply h2i, rw subtype.ext, exact h'
 end
 
 lemma mi_not_on_boundary (j : fin n) : c.tail.b j < (cs (mi h v)).tail.b j ∧
   (cs (mi h v)).tail.b j + (cs (mi h v)).w < c.tail.b j + c.w :=
 begin
+  let i := mi h v, have hi : i ∈ bcubes cs c := mi_mem_bcubes,
   rcases (two_le_iff' j).mp _ with ⟨j', hj'⟩, swap,
   { rw [mk_fin, ←nat.cast_two, nat_cast_le], apply nat.le_of_succ_le_succ h.2.2.2.2 },
+  --by_contra hj, simp only [not_and_distrib', not_lt] at hj,
+
+
+
   split,
   { rw [←not_le], intro hj,
-    have h2j : (cs (mi h v)).b j.succ = c.b j.succ := le_antisymm hj (b_le_b (mi_mem_bcubes h v) j),
+    have h2j : (cs i).b j.succ = c.b j.succ := le_antisymm hj (b_le_b hi j),
     let p : fin (n+1) → ℝ := cons (c.b 0)
-      (λ j₂, if j₂ = j then (cs $ mi h v).b j.succ + (cs $ mi h v).w else (cs $ mi h v).b j₂.succ),
+      (λ j₂, if j₂ = j then (cs i).b j.succ + (cs i).w else (cs i).b j₂.succ),
     have hp : p ∈ c.bottom,
     { simp [bottom, p, -add_comm, to_set, tail, side_tail], intro j₂,
-      by_cases hj₂ : j₂ = j, simp [hj₂, -add_comm, h2j, side, hw', his i hi],
-      simp [hj₂, -add_comm], apply h0is i hi, apply b_mem_side },
+      by_cases hj₂ : j₂ = j, simp [hj₂, -add_comm, h2j, side, hw', w_lt_w h v hi],
+      simp [hj₂, -add_comm], apply tail_sub hi, apply b_mem_side },
     rcases v.1 hp with ⟨_, ⟨i', rfl⟩, hi'⟩,
-    have h2i' : i' ∈ is := ⟨hi'.1.symm, v.2.1 i' hi'.1.symm ⟨tail p, hi'.2, hp.2⟩⟩,
+    have h2i' : i' ∈ bcubes cs c := ⟨hi'.1.symm, v.2.1 i' hi'.1.symm ⟨tail p, hi'.2, hp.2⟩⟩,
+    have i_i' : i ≠ i',
+    { rintro rfl, simpa [p, cube.tail, tail, hw, lt_irrefl] using (hi'.2 j).2 },
     have h3i' : (cs i').b j.succ = (cs i).b j.succ + (cs i).w,
-    { have : i ≠ i', { rintro rfl, simpa [p, cube.tail, tail, hw, lt_irrefl] using (hi'.2 j).2 },
-      have := h.1 i i' this, rw [on_fun, to_set_disjoint, exists_fin_succ] at this,
+    { have := h.1 i i' i_i', rw [on_fun, to_set_disjoint, exists_fin_succ] at this,
       rcases this with h0|⟨j₂, hj₂⟩,
-      { exfalso, apply not_disjoint_iff.mpr ⟨c.b 0, hlis _ hi, hlis _ h2i'⟩ h0 },
+      { exfalso, apply not_disjoint_iff.mpr ⟨c.b 0, bottom_mem_side hi, bottom_mem_side h2i'⟩ h0 },
       have : j₂ = j,
       { by_contra h2j₂, apply not_disjoint_iff.mpr ⟨p j₂.succ, _, hi'.2 j₂⟩ hj₂, simp [p, h2j₂] },
       rw this at hj₂,
       apply Ico_disjoint hj₂ (by simp [hw]) (by simp [hw]), convert hi'.2 j, simp [p] },
-    cases lt_or_le ((cs i').tail.b j) ((cs i).tail.b j) with h4i' h4i',
-    { let p' : fin (n+1) → ℝ :=
-      cons (c.b 0) (λ j₂, if j₂ = j' then (cs i').b j'.succ else (cs i).b j₂.succ),
-      have hp' : p' ∈ c.bottom,
-      { simp [bottom, p', -add_comm, to_set, tail, side_tail], intro j₂,
-        by_cases hj₂ : j₂ = j', simp [hj₂, -add_comm, h2j],apply h0is i' h2i', apply b_mem_side,
-        simp [hj₂, -add_comm], apply h0is i hi, apply b_mem_side },
-      rcases v.1 hp' with ⟨_, ⟨i'', rfl⟩, hi''⟩,
-      have h2i'' : i'' ∈ is := ⟨hi''.1.symm, v.2.1 i'' hi''.1.symm ⟨tail p', hi''.2, hp'.2⟩⟩,
-      have h3i'' : i' ≠ i'', { sorry },
-      have h4i'' : i ≠ i'', { sorry },
-      apply not.elim _ (h.1 i' i'' h3i''),
-      simp [on_fun, to_set_disjoint, not_disjoint_iff, forall_fin_succ],
-      refine ⟨⟨c.b 0, hlis _ h2i', hlis _ h2i''⟩, _⟩,
-      intro j₂,
-      by_cases hj₂ : j₂ = j, cases hj₂, refine ⟨(cs i).b j.succ + (cs i).w, _, _⟩,
-      convert hi'.2 j, simp [p],
+    have : nonempty ↥((cs i').tail.side j' \ (cs i).tail.side j'),
+    { apply nonempty_Ico_sdiff; simp [hw], apply mi_strict_minimal i_i' h2i' },
+    rcases this with ⟨⟨x, hx⟩⟩,
+    let p' : fin (n+1) → ℝ :=
+    cons (c.b 0) (λ j₂, if j₂ = j' then x else (cs i).b j₂.succ),
+    have hp' : p' ∈ c.bottom,
+    { simp [bottom, p', -add_comm, to_set, tail, side_tail], intro j₂,
+      by_cases hj₂ : j₂ = j', simp [hj₂, -add_comm, h2j], apply tail_sub h2i', apply hx.1,
+      simp [hj₂, -add_comm], apply tail_sub hi, apply b_mem_side },
+    rcases v.1 hp' with ⟨_, ⟨i'', rfl⟩, hi''⟩,
+    have h2i'' : i'' ∈ bcubes cs c := ⟨hi''.1.symm, v.2.1 i'' hi''.1.symm ⟨tail p', hi''.2, hp'.2⟩⟩,
+    have i'_i'' : i' ≠ i'',
+    { rintro ⟨⟩, simpa [cube.tail, tail, p', hj', h3i', not_le_of_lt (cs i).hw] using (hi''.2 j).1 },
+    have i_i'' : i ≠ i'', { intro h, induction h, simpa [hx.2] using hi''.2 j' },
+    apply not.elim _ (h.1 i' i'' i'_i''),
+    simp [on_fun, to_set_disjoint, not_disjoint_iff, forall_fin_succ],
+    refine ⟨⟨c.b 0, bottom_mem_side h2i', bottom_mem_side h2i''⟩, _⟩,
+    intro j₂,
+    by_cases hj₂ : j₂ = j,
+    { cases hj₂, refine ⟨(cs i).b j.succ + (cs i).w, _, _⟩,
+      { convert hi'.2 j, simp [p] },
       split, apply le_trans (hi''.2 j).1, simp [p', hj', hw'],
-      apply lt_of_lt_of_le (add_lt_add_left (h3i _ h4i'' h2i'') _),
-      rw [add_le_add_iff_right, h2j], apply h4is i'' h2i'',
-      by_cases hj₂ : j₂ = j', sorry, sorry },
-    { have : (cs i).tail.b j + (cs i).w < 1, sorry,
-      sorry
-    }},
+      apply lt_of_lt_of_le (add_lt_add_left (mi_strict_minimal i_i'' h2i'') _),
+      rw [add_le_add_iff_right, h2j], apply b_le_b h2i'' },
+    by_cases h2j₂ : j₂ = j',
+    { cases h2j₂, refine ⟨x, hx.1, _⟩, convert hi''.2 j', simp },
+    refine ⟨(cs i).b j₂.succ, _, _⟩,
+    { convert hi'.2 j₂, simp [hj₂] },
+    { convert hi''.2 j₂, simp [h2j₂] }},
   { sorry }
 end
 
-def main_lemma (h : correct cs) (v : valley cs c) :
-  { i : ι // valley cs ((cs i).shift_up) ∧ (cs i).w < c.w } :=
+def valley_mi : valley cs ((cs (mi h v)).shift_up) :=
 begin
-  have h5i : ∀j, c.tail.b j < (cs i).tail.b j ∧ (cs i).tail.b j + (cs i).w < c.tail.b j + c.w,
-  { intro j,
-    rcases (two_le_iff' j).mp _ with ⟨j', hj'⟩, swap,
-    { rw [mk_fin, ←nat.cast_two, nat_cast_le], apply nat.le_of_succ_le_succ h.2.2.2.2 },
-    split,
-    { rw [←not_le], intro hj,
-      have h2j : (cs i).b j.succ = c.b j.succ := le_antisymm hj (h4is i hi j),
-      let p : fin (n+1) → ℝ :=
-      cons (c.b 0) (λ j₂, if j₂ = j then (cs i).b j.succ + (cs i).w else (cs i).b j₂.succ),
-      have hp : p ∈ c.bottom,
-      { simp [bottom, p, -add_comm, to_set, tail, side_tail], intro j₂,
-        by_cases hj₂ : j₂ = j, simp [hj₂, -add_comm, h2j, side, hw', his i hi],
-        simp [hj₂, -add_comm], apply h0is i hi, apply b_mem_side },
-      rcases v.1 hp with ⟨_, ⟨i', rfl⟩, hi'⟩,
-      have h2i' : i' ∈ is := ⟨hi'.1.symm, v.2.1 i' hi'.1.symm ⟨tail p, hi'.2, hp.2⟩⟩,
-      have h3i' : (cs i').b j.succ = (cs i).b j.succ + (cs i).w,
-      { have : i ≠ i', { rintro rfl, simpa [p, cube.tail, tail, hw, lt_irrefl] using (hi'.2 j).2 },
-        have := h.1 i i' this, rw [on_fun, to_set_disjoint, exists_fin_succ] at this,
-        rcases this with h0|⟨j₂, hj₂⟩,
-        { exfalso, apply not_disjoint_iff.mpr ⟨c.b 0, hlis _ hi, hlis _ h2i'⟩ h0 },
-        have : j₂ = j,
-        { by_contra h2j₂, apply not_disjoint_iff.mpr ⟨p j₂.succ, _, hi'.2 j₂⟩ hj₂, simp [p, h2j₂] },
-        rw this at hj₂,
-        apply Ico_disjoint hj₂ (by simp [hw]) (by simp [hw]), convert hi'.2 j, simp [p] },
-      cases lt_or_le ((cs i').tail.b j) ((cs i).tail.b j) with h4i' h4i',
-      { let p' : fin (n+1) → ℝ :=
-        cons (c.b 0) (λ j₂, if j₂ = j' then (cs i').b j'.succ else (cs i).b j₂.succ),
-        have hp' : p' ∈ c.bottom,
-        { simp [bottom, p', -add_comm, to_set, tail, side_tail], intro j₂,
-          by_cases hj₂ : j₂ = j', simp [hj₂, -add_comm, h2j],apply h0is i' h2i', apply b_mem_side,
-          simp [hj₂, -add_comm], apply h0is i hi, apply b_mem_side },
-        rcases v.1 hp' with ⟨_, ⟨i'', rfl⟩, hi''⟩,
-        have h2i'' : i'' ∈ is := ⟨hi''.1.symm, v.2.1 i'' hi''.1.symm ⟨tail p', hi''.2, hp'.2⟩⟩,
-        have h3i'' : i' ≠ i'', { sorry },
-        have h4i'' : i ≠ i'', { sorry },
-        apply not.elim _ (h.1 i' i'' h3i''),
-        simp [on_fun, to_set_disjoint, not_disjoint_iff, forall_fin_succ],
-        refine ⟨⟨c.b 0, hlis _ h2i', hlis _ h2i''⟩, _⟩,
-        intro j₂,
-        by_cases hj₂ : j₂ = j, cases hj₂, refine ⟨(cs i).b j.succ + (cs i).w, _, _⟩,
-        convert hi'.2 j, simp [p],
-        split, apply le_trans (hi''.2 j).1, simp [p', hj', hw'],
-        apply lt_of_lt_of_le (add_lt_add_left (h3i _ h4i'' h2i'') _),
-        rw [add_le_add_iff_right, h2j], apply h4is i'' h2i'',
-        by_cases hj₂ : j₂ = j', sorry, sorry },
-      { have : (cs i).tail.b j + (cs i).w < 1, sorry,
-        sorry
-      }},
-    { sorry }},
-
-  -- refine ⟨i, ⟨_, _, _⟩, _⟩,
-  -- { intro p, apply shift_up_bottom_subset_bottoms h h4i },
-  -- { rintros i' hi' ⟨p2, hp2, h2p2⟩, simp at hi', classical, by_contra h2i',
-  --   rw [tail_shift_up] at h2p2, simp [not_subset] at h2i', rcases h2i' with ⟨p1, hp1, h2p1⟩,
-  --   have : ∃p3, p3 ∈ (cs i').tail.to_set ∧ p3 ∉ (cs i).tail.to_set ∧ p3 ∈ c.tail.to_set,
-  --   { simp [to_set, not_forall] at h2p1, cases h2p1 with j hj,
-  --     rcases Ico_lemma (h5i j).1 (by simp [hw]) (h5i j).2
-  --       (le_trans (hp2 j).1 $ le_of_lt (h2p2 j).2)
-  --       (le_trans (h2p2 j).1 $ le_of_lt (hp2 j).2) ⟨hj, hp1 j⟩ with ⟨w, hw, h2w, h3w⟩,
-  --     refine ⟨λ j', if j' = j then w else p2 j', _, _, _⟩,
-  --     { intro j', by_cases h : j' = j, simp [if_pos h], convert h3w,
-  --       simp [if_neg h], exact hp2 j' },
-  --     { simp [to_set, not_forall], use j, rw [if_pos rfl], convert h2w },
-  --     { intro j', by_cases h : j' = j, simp [if_pos h, side_tail], convert hw,
-  --       simp [if_neg h], apply hi.2, apply h2p2 }},
-  --   rcases this with ⟨p3, h1p3, h2p3, h3p3⟩,
-  --   let p := cons (c.b 0) p3,
-  --   have hp : p ∈ c.bottom, { refine ⟨rfl, _⟩, rwa [tail_cons] },
-  --   rcases v.1 hp with ⟨_, ⟨i'', rfl⟩, hi''⟩,
-  --   have h2i'' : i'' ∈ is,
-  --   { use hi''.1.symm, apply v.2.1 i'' hi''.1.symm,
-  --     use tail p, split, exact hi''.2, rw [tail_cons], exact h3p3 },
-  --   have h3i'' : (cs i).w < (cs i'').w,
-  --   { apply lt_of_le_of_ne (h2i i'' h2i''), apply h.2.2.1.ne, rintro rfl, apply h2p3,
-  --     convert hi''.2, rw [tail_cons] },
-  --   let p' := cons (cs i).xm p3,
-  --   have hp' : p' ∈ (cs i').to_set,
-  --   { simpa [to_set, forall_fin_succ, p', hi'.symm] using h1p3 },
-  --   have h2p' : p' ∈ (cs i'').to_set,
-  --   { simp [to_set, forall_fin_succ, p'],
-  --     refine ⟨_, by simpa [to_set, p] using hi''.2⟩,
-  --     have : (cs i).b 0 = (cs i'').b 0, { by rw [hi.1, h2i''.1] },
-  --     simp [side, le_of_lt (cs i).hw, xm, this, h3i''] },
-  --   apply not_disjoint_iff.mpr ⟨p', hp', h2p'⟩,
-  --   apply h.1, rintro rfl, apply (cs i).b_ne_xm, rw [←hi', ←hi''.1, hi.1], refl },
-  -- { intros i' hi', dsimp [shift_up] at hi', cases h.2.2.1 hi', apply b_ne_xm },
-  -- { exact his i hi }
+  let i := mi h v, have hi : i ∈ bcubes cs c := mi_mem_bcubes,
+  refine ⟨_, _, _⟩,
+  { intro p, apply shift_up_bottom_subset_bottoms h mi_xm_ne_one },
+  { rintros i' hi' ⟨p2, hp2, h2p2⟩, simp at hi', classical, by_contra h2i',
+    rw [tail_shift_up] at h2p2, simp [not_subset] at h2i', rcases h2i' with ⟨p1, hp1, h2p1⟩,
+    have : ∃p3, p3 ∈ (cs i').tail.to_set ∧ p3 ∉ (cs i).tail.to_set ∧ p3 ∈ c.tail.to_set,
+    { simp [to_set, not_forall] at h2p1, cases h2p1 with j hj,
+      rcases Ico_lemma (mi_not_on_boundary j).1 (by simp [hw]) (mi_not_on_boundary j).2
+        (le_trans (hp2 j).1 $ le_of_lt (h2p2 j).2)
+        (le_trans (h2p2 j).1 $ le_of_lt (hp2 j).2) ⟨hj, hp1 j⟩ with ⟨w, hw, h2w, h3w⟩,
+      refine ⟨λ j', if j' = j then w else p2 j', _, _, _⟩,
+      { intro j', by_cases h : j' = j, simp [if_pos h], convert h3w,
+        simp [if_neg h], exact hp2 j' },
+      { simp [to_set, not_forall], use j, rw [if_pos rfl], convert h2w },
+      { intro j', by_cases h : j' = j, simp [if_pos h, side_tail], convert hw,
+        simp [if_neg h], apply hi.2, apply h2p2 }},
+    rcases this with ⟨p3, h1p3, h2p3, h3p3⟩,
+    let p := cons (c.b 0) p3,
+    have hp : p ∈ c.bottom, { refine ⟨rfl, _⟩, rwa [tail_cons] },
+    rcases v.1 hp with ⟨_, ⟨i'', rfl⟩, hi''⟩,
+    have h2i'' : i'' ∈ bcubes cs c,
+    { use hi''.1.symm, apply v.2.1 i'' hi''.1.symm,
+      use tail p, split, exact hi''.2, rw [tail_cons], exact h3p3 },
+    have h3i'' : (cs i).w < (cs i'').w,
+    { apply mi_strict_minimal _ h2i'', rintro rfl, apply h2p3, convert hi''.2, rw [tail_cons] },
+    let p' := cons (cs i).xm p3,
+    have hp' : p' ∈ (cs i').to_set,
+    { simpa [to_set, forall_fin_succ, p', hi'.symm] using h1p3 },
+    have h2p' : p' ∈ (cs i'').to_set,
+    { simp [to_set, forall_fin_succ, p'],
+      refine ⟨_, by simpa [to_set, p] using hi''.2⟩,
+      have : (cs i).b 0 = (cs i'').b 0, { by rw [hi.1, h2i''.1] },
+      simp [side, le_of_lt (cs i).hw, xm, this, h3i''] },
+    apply not_disjoint_iff.mpr ⟨p', hp', h2p'⟩,
+    apply h.1, rintro rfl, apply (cs i).b_ne_xm, rw [←hi', ←hi''.1, hi.1], refl },
+  { intros i' hi', dsimp [shift_up] at hi', cases h.2.2.1 hi', apply b_ne_xm }
 end
 
-noncomputable def sequence_of_cubes (h : correct cs) : ℕ → { i : ι // valley cs ((cs i).shift_up) }
-| 0     := let x := main_lemma h $ valley_all h in ⟨x.1, x.2.1⟩
-| (k+1) := let x := main_lemma h (sequence_of_cubes k).2 in ⟨x.1, x.2.1⟩
+variables (h)
+omit v
 
-def decreasing_sequence (h : correct cs) (k : ℕ) : order_dual ℝ :=
+noncomputable def sequence_of_cubes : ℕ → { i : ι // valley cs ((cs i).shift_up) }
+| 0     := let v := valley_unit_cube h      in ⟨mi h v, valley_mi⟩
+| (k+1) := let v := (sequence_of_cubes k).2 in ⟨mi h v, valley_mi⟩
+
+def decreasing_sequence (k : ℕ) : order_dual ℝ :=
 (cs (sequence_of_cubes h k).1).w
 
-lemma strict_mono_sequence_of_cubes (h : correct cs) : strict_mono $ decreasing_sequence h :=
-strict_mono_nat $ λ k, by { dsimp [decreasing_sequence, sequence_of_cubes],
-  exact (main_lemma h (sequence_of_cubes h k).2).2.2 }
+lemma strict_mono_sequence_of_cubes : strict_mono $ decreasing_sequence h :=
+strict_mono_nat $
+begin
+  intro k, let v := (sequence_of_cubes h k).2, dsimp [decreasing_sequence, sequence_of_cubes],
+  apply w_lt_w h v (@mi_mem_bcubes _ _ _ _ h _ v),
+end
 
-open cardinal
+omit h
+
 theorem cubing_a_cube (h : correct cs) : false :=
 begin
   apply not_le_of_lt (lt_omega_iff_fintype.mpr ⟨_inst_1⟩),
   rw [omega, lift_id], fapply mk_le_of_injective, exact λ n, (sequence_of_cubes h n).1,
-  intros n m hnm,
-  apply strict_mono.injective (strict_mono_sequence_of_cubes h), dsimp only [decreasing_sequence],
-  rw hnm
+  intros n m hnm, apply strict_mono.injective (strict_mono_sequence_of_cubes h),
+  dsimp only [decreasing_sequence], rw hnm
 end
