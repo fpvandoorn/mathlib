@@ -593,6 +593,6 @@ theorem cannot_cube_a_cube :
   false :=                                       -- then we can derive a contradiction
 begin
   intros n hn ι hι cs h1 h2 h3 h4, resetI,
-  cases n, rw [ge, ←not_lt] at hn, apply hn, norm_num,
+  rcases n, cases hn,
   exact not_correct ⟨h2, h3, h4, h1, hn⟩
 end
