@@ -278,8 +278,10 @@ begin
 end
 omit h
 
-/- A valley is a square on which at least two cubes in the family of cubes are placed,
-  and none of those cubes can be partially outside the square.
+/- A valley is a square on which cubes in the family of cubes are placed, so that the cubes
+  completely cover the valley and none of those cubes is partially outside the square.
+  We also require that no cube on it has the same size as the valley (so that there are at least
+  two cubes on the valley).
   This is the main concept in the formalization.
   We prove that the smallest cube on a valley has another valley on the top of it, which
   gives an infinite sequence of cubes in the partition, which contradicts the finiteness.
