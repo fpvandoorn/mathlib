@@ -129,7 +129,7 @@ by { convert add_lt_add_iff_left x, rw [add_zero] }
 end
 -- end move
 
-/- A (hyper)-cube (in standard orientation) is a vector `b` consisting of the bottom-left point
+/-- A (hyper)-cube (in standard orientation) is a vector `b` consisting of the bottom-left point
 of the cube, a width `w` and a proof that `w > 0`. We use functions from `fin n` to denote vectors.
 -/
 structure cube (n : ℕ) : Type :=
@@ -140,7 +140,7 @@ structure cube (n : ℕ) : Type :=
 namespace cube
 lemma hw' (c : cube n) : 0 ≤ c.w := le_of_lt c.hw
 
-/- The j-th side of a cube is the half-open interval `[b j, b j + w)` -/
+/-- The j-th side of a cube is the half-open interval `[b j, b j + w)` -/
 def side (c : cube n) (j : fin n) : set ℝ :=
 Ico (c.b j) (c.b j + c.w)
 
@@ -256,7 +256,7 @@ begin
   apply h.1, exact hi'.symm
 end
 
-/- The top of a cube (which is the bottom of the cube shifted up by its width) must be covered by
+/-- The top of a cube (which is the bottom of the cube shifted up by its width) must be covered by
   bottoms of (other) cubes in the family. -/
 lemma shift_up_bottom_subset_bottoms (hc : (cs i).xm ≠ 1) :
   (cs i).shift_up.bottom ⊆ ⋃(i : ι), (cs i).bottom :=
@@ -278,7 +278,7 @@ begin
 end
 omit h
 
-/- A valley is a square on which cubes in the family of cubes are placed, so that the cubes
+/-- A valley is a square on which cubes in the family of cubes are placed, so that the cubes
   completely cover the valley and none of those cubes is partially outside the square.
   We also require that no cube on it has the same size as the valley (so that there are at least
   two cubes on the valley).
@@ -295,7 +295,7 @@ c.bottom ⊆ (⋃(i : ι), (cs i).bottom) ∧
 
 variables {c : cube (n+1)} (v : valley cs c)
 
-/- The bottom of the unit cube is a valley -/
+/-- The bottom of the unit cube is a valley -/
 lemma valley_unit_cube (h : correct cs) : valley cs unit_cube :=
 begin
   refine ⟨_, _, _⟩,
@@ -311,11 +311,11 @@ begin
   { exact λ i hi, false.elim $ w_ne_one h i hi }
 end
 
-/- the cubes which lie in the valley `c` -/
+/-- the cubes which lie in the valley `c` -/
 def bcubes (cs : ι → cube (n+1)) (c : cube (n+1)) : set ι :=
 { i : ι | (cs i).b 0 = c.b 0 ∧ (cs i).tail.to_set ⊆ c.tail.to_set }
 
-/- A cube which lies on the boundary of a valley in dimension `j` -/
+/-- A cube which lies on the boundary of a valley in dimension `j` -/
 def on_boundary (hi : i ∈ bcubes cs c) (j : fin n) : Prop :=
 c.b j.succ = (cs i).b j.succ ∨ (cs i).b j.succ + (cs i).w = c.b j.succ + c.w
 
@@ -382,7 +382,7 @@ lemma exists_mi : ∃(i : ι), i ∈ bcubes cs c ∧ ∀(i' ∈ bcubes cs c),
 (bcubes cs c).exists_min (λ i, (cs i).w) (finite.of_fintype _)
   (nonempty_bcubes h v)
 
-/- We let `mi` be the (index for the) smallest cube in the valley `c` -/
+/-- We let `mi` be the (index for the) smallest cube in the valley `c` -/
 def mi : ι := classical.some $ exists_mi h v
 
 variables {h v}
@@ -581,7 +581,7 @@ begin
   dsimp only [decreasing_sequence], rw hnm
 end
 
-/- A cube cannot be cubed. -/
+/-- A cube cannot be cubed. -/
 theorem cannot_cube_a_cube :
   ∀{n : ℕ}, n ≥ 3 →                              -- In ℝ^n for n ≥ 3
   ∀{ι : Type} [fintype ι] {cs : ι → cube n},     -- given a finite collection of (hyper)cubes
