@@ -111,8 +111,6 @@ begin
   simp [le_refl, hy, lt_trans hx h2.2]
 end
 
-/- why is `max_add_add_left` only proven for an instance
-`decidable_linear_ordered_cancel_comm_monoid` that is never used in the library? -/
 lemma nonempty_Ico_sdiff {α} [decidable_linear_ordered_comm_group α] {x dx y dy : α}
   (h : dy < dx) (hx : 0 < dx) : nonempty ↥(Ico x (x + dx) \ Ico y (y + dy)) :=
 begin
@@ -122,7 +120,7 @@ begin
 end
 
 section
-variables {α : Type*} [decidable_linear_ordered_comm_group α] {x y : α}
+variables {α : Type*} [ordered_comm_group α] {x y : α}
 
 @[simp] lemma add_le_self_right : x + y ≤ y ↔ x ≤ 0 :=
 by { convert add_le_add_iff_right y, rw [zero_add] }
