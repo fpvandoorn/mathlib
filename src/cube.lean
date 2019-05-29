@@ -291,7 +291,7 @@ def valley (cs : ι → cube (n+1)) (c : cube (n+1)) : Prop :=
 c.bottom ⊆ (⋃(i : ι), (cs i).bottom) ∧
 (∀i, (cs i).b 0 = c.b 0 → (∃x, x ∈ (cs i).tail.to_set ∩ c.tail.to_set) →
   (cs i).tail.to_set ⊆ c.tail.to_set) ∧
-∀(i : ι), (cs i).w = c.w → (cs i).b 0 ≠ c.b 0
+∀(i : ι), (cs i).b 0 = c.b 0 → (cs i).w ≠ c.w
 
 variables {c : cube (n+1)} (v : valley cs c)
 
@@ -308,7 +308,7 @@ begin
     split, { apply le_antisymm, rw h0, exact zero_le_b h, exact (hi 0).1 },
     intro j, exact hi _ },
   { intros i hi h', rw to_set_subset, intro j, convert side_subset h, simp [side_tail] },
-  { exact λ i hi, false.elim $ w_ne_one h i hi }
+  { intros i hi, exact w_ne_one h i }
 end
 
 /-- the cubes which lie in the valley `c` -/
@@ -339,7 +339,7 @@ include h v
 /-- Every cube in the valley must be smaller than it -/
 lemma w_lt_w (hi : i ∈ bcubes cs c) : (cs i).w < c.w :=
 begin
-  apply lt_of_le_of_ne _ (λ h2i, v.2.2 i h2i hi.1),
+  apply lt_of_le_of_ne _ (v.2.2 i hi.1),
   have j : fin n := ⟨1, nat.le_of_succ_le_succ h.2.2.2.2⟩,
   rw [←add_le_add_iff_left ((cs i).b j.succ)],
   apply le_trans (t_le_t hi j), rw [add_le_add_iff_right], apply b_le_b hi,
@@ -550,7 +550,8 @@ begin
       simp [side, hw', xm, this, h3i''] },
     apply not_disjoint_iff.mpr ⟨p', hp', h2p'⟩,
     apply h.1, rintro rfl, apply (cs i).b_ne_xm, rw [←hi', ←hi''.1, hi.1], refl },
-  { intros i' hi', dsimp [shift_up] at hi', cases h.2.2.1 hi', apply b_ne_xm }
+  { intros i' hi' h2i', dsimp [shift_up] at h2i', replace h2i' := h.2.2.1 h2i'.symm, induction h2i',
+    exact b_ne_xm (cs i) hi' }
 end
 
 variables (h)
