@@ -57,14 +57,6 @@ end
 lemma not_disjoint_iff {α} {s t : set α} : ¬disjoint s t ↔ ∃x, x ∈ s ∧ x ∈ t :=
 by { rw [set.disjoint_iff, subset_empty_iff], apply ne_empty_iff_exists_mem }
 
-lemma order_dual_lt {α} [has_lt α] {x y : order_dual α} :
-  x < y ↔ (show α, from y) < (show α, from x) :=
-iff.rfl
-
-lemma order_dual_le {α} [has_le α] {x y : order_dual α} :
-  x ≤ y ↔ (show α, from y) ≤ (show α, from x) :=
-iff.rfl
-
 variable {n : ℕ}
 
 def tail (p : fin (n+1) → ℝ) : fin n → ℝ := λ i, p i.succ
@@ -89,18 +81,6 @@ lemma exists_fin_succ {P : fin (n+1) → Prop} :
 ⟨λ ⟨i, h⟩, fin.cases or.inl (λ i hi, or.inr ⟨i, hi⟩) i h,
   λ h, or.elim h (λ h, ⟨0, h⟩) $ λ⟨i, hi⟩, ⟨i.succ, hi⟩⟩
 
-lemma Ico_lemma {α} [decidable_linear_order α] {x₁ x₂ y₁ y₂ z₁ z₂ w : α}
-  (h₁ : x₁ < y₁) (hy : y₁ < y₂) (h₂ : y₂ < x₂)
-  (hz₁ : z₁ ≤ y₂) (hz₂ : y₁ ≤ z₂) (hw : w ∉ Ico y₁ y₂ ∧ w ∈ Ico z₁ z₂) :
-  ∃w, w ∈ Ico x₁ x₂ ∧ w ∉ Ico y₁ y₂ ∧ w ∈ Ico z₁ z₂ :=
-begin
-  simp at hw,
-  refine ⟨max x₁ (min w y₂), _, _, _⟩,
-  simp [le_refl, lt_trans h₁ (lt_trans hy h₂), h₂],
-  simp [lt_irrefl, not_le_of_lt h₁], intros, apply hw.1, assumption,
-  simp [hw.2.1, hw.2.2, hz₁, lt_of_lt_of_le h₁ hz₂] at ⊢
-end
-
 lemma Ico_disjoint {α} [decidable_linear_order α] {x₁ x₂ y₁ y₂ : α}
   (h : disjoint (Ico x₁ x₂) (Ico y₁ y₂)) (hx : x₁ < x₂) (hy : y₁ < y₂) (h2 : x₂ ∈ Ico y₁ y₂) :
   y₁ = x₂ :=
@@ -117,6 +97,18 @@ begin
   cases lt_or_le x y with h' h',
   { use x, simp* },
   { use max x (x + dy), simp [*, le_refl] }
+end
+
+lemma Ico_lemma {α} [decidable_linear_order α] {x₁ x₂ y₁ y₂ z₁ z₂ w : α}
+  (h₁ : x₁ < y₁) (hy : y₁ < y₂) (h₂ : y₂ < x₂)
+  (hz₁ : z₁ ≤ y₂) (hz₂ : y₁ ≤ z₂) (hw : w ∉ Ico y₁ y₂ ∧ w ∈ Ico z₁ z₂) :
+  ∃w, w ∈ Ico x₁ x₂ ∧ w ∉ Ico y₁ y₂ ∧ w ∈ Ico z₁ z₂ :=
+begin
+  simp at hw,
+  refine ⟨max x₁ (min w y₂), _, _, _⟩,
+  simp [le_refl, lt_trans h₁ (lt_trans hy h₂), h₂],
+  simp [lt_irrefl, not_le_of_lt h₁], intros, apply hw.1, assumption,
+  simp [hw.2.1, hw.2.2, hz₁, lt_of_lt_of_le h₁ hz₂] at ⊢
 end
 
 section
