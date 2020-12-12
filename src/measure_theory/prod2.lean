@@ -14,33 +14,169 @@ finitary products
 -/
 
 noncomputable theory
-open fintype set function
+open fintype set function equiv
 open_locale big_operators classical
+
+lemma pi_congr {ι} {α β : ι → Type*} (h : ∀ i, α i = β i) : (Π i, α i) = (Π i, β i) :=
+by { cases (show α = β, from funext h), refl }
+
+
+namespace function
+
+variables {ι : Type*} [decidable_eq ι] {α : ι → Type*} {s : set ι} {i : ι}
+
+def extend_insert (f : Π (j : ι), j ∈ s → α j) (x : α i) (j : ι) (hj : j ∈ insert i s) : α j :=
+if h : j = i then by { subst h, exact x } else f j (mem_of_mem_insert_of_ne hj h)
+
+@[simp] def extend_insert_of_mem (f : Π (j : ι), j ∈ s → α j) (x : α i) {j : ι} (hj : j ∈ s)
+  (hi : i ∉ s) : extend_insert f x j (mem_insert_of_mem _ hj) = f j hj :=
+begin
+  have : j ≠ i, { rintro rfl, exact hi hj },
+  simp [extend_insert, this]
+end
+
+@[simp] def extend_insert_self (f : Π (j : ι), j ∈ s → α j) (x : α i) :
+  extend_insert f x i (mem_insert i s) = x :=
+by simp [extend_insert]
+
+end function
+open function
+
+namespace finset
+variables {α : Type*}
+
+lemma mem_insert_coe {s : finset α} {x y : α} : x ∈ insert y s ↔ x ∈ insert y (s : set α) :=
+by simp
+
+end finset
+open finset
+
+
+namespace equiv
+/-- The type of maps from `true` is equivalent to the codomain. -/
+def true_arrow_equiv (α : Sort*) : (true → α) ≃ α :=
+⟨λ f, f trivial, λ a u, a, λ f, by { ext ⟨⟩, refl }, λ u, rfl⟩
+
+variables {ι : Type*} (α : ι → Type*)
+
+/- A pi-type over an empty type is equivalent to `punit`. Similar to `pempty_arrow_equiv_punit`. -/
+def pi_equiv_punit_of_empty (α : ι → Type*) (e : ι → false) : (Π i : ι, α i) ≃ punit :=
+@equiv_punit_of_unique _ ⟨⟨λ x, false.elim (e x)⟩, λ f, funext (λ x, false.elim (e x))⟩
+
+/- A pi-type over the empty set is equivalent to `punit`. Similar to `pi_equiv_punit_of_empty`. -/
+def pi_mem_empty_equiv : (Π i ∈ (∅ : set ι), α i) ≃ punit :=
+by { refine @equiv_punit_of_unique _ ⟨⟨λ _, false.elim⟩, λ f, funext (λ x, _)⟩, ext, contradiction }
+
+/- A pi-type over the empty `finset` is equivalent to `punit`.
+  Definitionally equal to `pi_mem_empty_equiv`. -/
+def pi_mem_finset_empty_equiv : (Π i ∈ (∅ : finset ι), α i) ≃ punit :=
+pi_mem_empty_equiv α
+
+/- A pi-type over the set `insert i s` is a binary product. -/
+def pi_mem_insert_equiv {s : set ι} {i : ι} (hi : i ∉ s) :
+  (Π j ∈ (insert i s), α j) ≃ α i × (Π j ∈ s, α j) :=
+{ to_fun := λ f, ⟨f i (set.mem_insert _ _), λ j hj, f j (mem_insert_of_mem _ hj)⟩,
+  inv_fun := λ xg, extend_insert xg.2 xg.1,
+  left_inv := begin
+    intro f, ext j (rfl|hj),
+    { apply extend_insert_self },
+    { exact extend_insert_of_mem _ _ hj hi },
+  end,
+  right_inv := begin
+    rintro ⟨x, g⟩, simp only [true_and, prod.mk.inj_iff, eq_self_iff_true, extend_insert_self],
+    ext j hj, exact extend_insert_of_mem _ _ hj hi
+  end }
+
+/- A pi-type over the `finset` `insert i s` is a binary product. -/
+def pi_mem_finset_insert_equiv {s : finset ι} {i : ι} (hx : i ∉ s) :
+  (Π j ∈ (insert i s), α j) ≃ α i × (Π j ∈ s, α j) :=
+by { convert pi_mem_insert_equiv α (show i ∉ (s : set ι), from hx),
+     apply pi_congr, intro i, rw [finset.mem_insert_coe] }
+
+end equiv
+open equiv
+
 
 
 namespace list
 
+section
+variables {α : Type*}
+
+lemma to_finset_surj_on : surj_on to_finset {l : list α | l.nodup} univ :=
+begin
+  rintro s -,
+  induction s with t hl,
+  induction t using quot.ind with l,
+  refine ⟨l, hl, (to_finset_eq hl).symm⟩
+end
+
+end
+
 variables {ι : Type*} (α : ι → Type*)
 
--- def tprod : list ι → Type*
--- | []        := punit
--- | (i :: is) := α i × tprod is
 
--- def pi_mem_empty_equiv : (Π i ∈ (∅ : finset ι), α i) ≃ punit :=
--- by { refine @equiv_punit_of_unique _ ⟨⟨λ _, false.elim⟩, λ f, funext (λ x, _)⟩, ext, contradiction }
+/-- The product of a family of types over a list. -/
+@[nolint has_inhabited_instance] def tprod (l : list ι) : Type* :=
+l.foldr (λ i β, α i × β) punit
 
--- def pi_mem_insert_equiv {s : set ι} {x : ι}
---   :
---   (Π i ∈ (∅ : finset ι), α i) ≃ punit :=
--- by { refine @equiv_punit_of_unique _ ⟨⟨λ _, false.elim⟩, λ f, funext (λ x, _)⟩, ext, contradiction }
+/-- A pi-type over a `finset` is equivalent to an iterated product. -/
+def pi_finset_equiv_tprod {s : finset ι} {l : list ι} (h : l.to_finset = s)
+  (h : l.nodup) : (Π i ∈ s, α i) ≃ l.tprod α :=
+begin
+  subst s, induction l with i l ih,
+  { exact pi_mem_finset_empty_equiv α },
+  { rw [to_finset_cons], rw [nodup_cons, ← mem_to_finset] at h,
+    refine (pi_mem_finset_insert_equiv α h.1).trans _, exact (equiv.refl _).prod_congr (ih h.2) }
+end
+
+/-- A pi-type over a `fintype` is equivalent to an iterated product. -/
+lemma pi_fintype_equiv_tprod [fintype ι] :
+  ∃ l : list ι, nodup l ∧ nonempty ((Π i, α i) ≃ l.tprod α) :=
+begin
+  rcases to_finset_surj_on (mem_univ (finset.univ : finset ι)) with ⟨l, h1l, h2l⟩,
+  refine ⟨l, h1l, ⟨_⟩⟩,
+  refine equiv.trans _ (pi_finset_equiv_tprod _ h2l h1l),
+  refine Pi_congr_right _, intro i, rw [eq_true_intro (finset.mem_univ _)],
+  exact (true_arrow_equiv _).symm
+end
+
+instance : measurable_space punit := ⊤
+instance measurable_space.pi_Prop {δ : Prop} {π : δ → Type*} [m : Π a, measurable_space (π a)] :
+  measurable_space (Π a, π a) :=
+⨆ a, (m a).comap (λ b, b a)
+
+instance tprod.measurable_space [∀ i, measurable_space (α i)] :
+  ∀ (l : list ι), measurable_space (l.tprod α)
+| []        := punit.measurable_space
+| (i :: is) := @prod.measurable_space _ _ _ (tprod.measurable_space is)
+
+def pi_finset_measurable_equiv_tprod [∀ i, measurable_space (α i)]
+  {s : finset ι} {l : list ι} (h : l.to_finset = s) :
+  measurable_equiv (Π i ∈ s, α i) (l.tprod α) :=
+begin
+  subst s, induction l with i l ih,
+  { exact pi_mem_finset_empty_equiv α },
+  { rw [to_finset_cons], rw [nodup_cons, ← mem_to_finset] at h,
+    refine (pi_mem_finset_insert_equiv α h.1).trans _, exact (equiv.refl _).prod_congr (ih h.2) }
+end
+
+def pi_fintype_measurable_equiv_tprod [fintype ι] [∀ i, measurable_space (α i)] :
+  ∃ l : list ι, l.nodup ∧ nonempty (measurable_equiv (Π i, α i) (l.tprod α)) :=
+begin
+  cases to_finset_surjective (finset.univ : finset ι) with l hl, refine ⟨⟨l, _⟩⟩,
+  refine measurable_equiv.trans _ (pi_finset_measurable_equiv_tprod _ hl),
+  refine Pi_congr_right _, intro i, rw [eq_true_intro (finset.mem_univ _)],
+  -- exact (true_arrow_equiv _).symm
+end
+
+
+
 
 -- def tprod_equiv_pi_to_finset : Π (l : list ι), tprod α l ≃ Π i ∈ l.to_finset, α i
 -- | []        := (pi_mem_empty_equiv α).symm
 -- | (i :: is) := _
 
-/- similar to `pempty_arrow_equiv_punit` -/
-def pi_equiv_punit_of_empty (α : ι → Type*) (e : ι → false) : (Π i : ι, α i) ≃ punit :=
-@equiv_punit_of_unique _ ⟨⟨λ x, false.elim (e x)⟩, λ f, funext (λ x, false.elim (e x))⟩
 
 -- #print fintype.card_eq_zero_equiv_equiv_pempty
 -- #print pi_empty_equiv
@@ -199,8 +335,9 @@ end
 
 /-- `measure.pi μ` is the finite product of the measures `{μ i | i : ι}`.
   It is defined to be the maximal product measure, i.e.
-  the maximal measure `n` with the property that `ν (pi univ s) = ∏ i, μ i (s i)`,
-  where `pi univ s` is the product of the sets `{ s i | i : ι }`. -/
+  the maximal measure `ν` with the property that `ν (pi univ s) ≤ ∏ i, μ i (s i)`,
+  where `pi univ s` is the product of the sets `{ s i | i : ι }`.
+  For sigma-finite measures we know that `ν (pi univ s) = ∏ i, μ i (s i)`. -/
 protected def pi : measure (Π i, α i) :=
 to_measure (outer_measure.pi (λ i, (μ i).to_outer_measure)) (pi_caratheodory μ)
 
