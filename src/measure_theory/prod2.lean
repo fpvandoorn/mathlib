@@ -49,7 +49,7 @@ lemma mem_insert_coe {s : finset α} {x y : α} : x ∈ insert y s ↔ x ∈ ins
 by simp
 
 end finset
-open finset
+-- open finset
 
 
 namespace equiv
@@ -88,10 +88,9 @@ def pi_mem_insert_equiv {s : set ι} {i : ι} (hi : i ∉ s) :
   end }
 
 /- A pi-type over the `finset` `insert i s` is a binary product. -/
-def pi_mem_finset_insert_equiv {s : finset ι} {i : ι} (hx : i ∉ s) :
-  (Π j ∈ (insert i s), α j) ≃ α i × (Π j ∈ s, α j) :=
-by { convert pi_mem_insert_equiv α (show i ∉ (s : set ι), from hx),
-     apply pi_congr, intro i, rw [finset.mem_insert_coe] }
+def pi_mem_list_cons_equiv {l : list ι} {i : ι} (hx : i ∉ l) :
+  (Π j ∈ i :: l, α j) ≃ α i × (Π j ∈ l, α j) :=
+pi_mem_insert_equiv α hx
 
 end equiv
 open equiv
@@ -121,23 +120,22 @@ variables {ι : Type*} (α : ι → Type*)
 l.foldr (λ i β, α i × β) punit
 
 /-- A pi-type over a `finset` is equivalent to an iterated product. -/
-def pi_finset_equiv_tprod {s : finset ι} {l : list ι} (h : l.to_finset = s)
-  (h : l.nodup) : (Π i ∈ s, α i) ≃ l.tprod α :=
+def pi_list_equiv_tprod {l : list ι} (h : l.nodup) : (Π i ∈ l, α i) ≃ l.tprod α :=
 begin
-  subst s, induction l with i l ih,
-  { exact pi_mem_finset_empty_equiv α },
-  { rw [to_finset_cons], rw [nodup_cons, ← mem_to_finset] at h,
-    refine (pi_mem_finset_insert_equiv α h.1).trans _, exact (equiv.refl _).prod_congr (ih h.2) }
+  induction l with i l ih,
+  { exact pi_mem_empty_equiv α },
+  { rw [nodup_cons] at h,
+    exact (pi_mem_list_cons_equiv α h.1).trans ((equiv.refl _).prod_congr (ih h.2)) }
 end
 
 /-- A pi-type over a `fintype` is equivalent to an iterated product. -/
 lemma pi_fintype_equiv_tprod [fintype ι] :
   ∃ l : list ι, nodup l ∧ nonempty ((Π i, α i) ≃ l.tprod α) :=
 begin
-  rcases to_finset_surj_on (mem_univ (finset.univ : finset ι)) with ⟨l, h1l, h2l⟩,
-  refine ⟨l, h1l, ⟨_⟩⟩,
-  refine equiv.trans _ (pi_finset_equiv_tprod _ h2l h1l),
-  refine Pi_congr_right _, intro i, rw [eq_true_intro (finset.mem_univ _)],
+  obtain ⟨l, lnd, hl⟩ := fintype.exists_univ_list ι,
+  refine ⟨l, lnd, ⟨_⟩⟩,
+  refine equiv.trans _ (pi_list_equiv_tprod _ lnd),
+  refine Pi_congr_right _, intro i, rw [eq_true_intro (hl i)],
   exact (true_arrow_equiv _).symm
 end
 
@@ -151,18 +149,17 @@ instance tprod.measurable_space [∀ i, measurable_space (α i)] :
 | []        := punit.measurable_space
 | (i :: is) := @prod.measurable_space _ _ _ (tprod.measurable_space is)
 
-def pi_finset_measurable_equiv_tprod [∀ i, measurable_space (α i)]
-  {s : finset ι} {l : list ι} (h : l.to_finset = s) :
-  measurable_equiv (Π i ∈ s, α i) (l.tprod α) :=
+def pi_finset_measurable_equiv_tprod [∀ i, measurable_space (α i)] {l : list ι} :
+  Π i ∈ l, α i ≃ᵐ l.tprod α :=
 begin
-  subst s, induction l with i l ih,
+  induction l with i l ih,
   { exact pi_mem_finset_empty_equiv α },
   { rw [to_finset_cons], rw [nodup_cons, ← mem_to_finset] at h,
     refine (pi_mem_finset_insert_equiv α h.1).trans _, exact (equiv.refl _).prod_congr (ih h.2) }
 end
 
 def pi_fintype_measurable_equiv_tprod [fintype ι] [∀ i, measurable_space (α i)] :
-  ∃ l : list ι, l.nodup ∧ nonempty (measurable_equiv (Π i, α i) (l.tprod α)) :=
+  ∃ l : list ι, l.nodup ∧ nonempty ((Π i, α i) ≃ᵐ l.tprod α) :=
 begin
   cases to_finset_surjective (finset.univ : finset ι) with l hl, refine ⟨⟨l, _⟩⟩,
   refine measurable_equiv.trans _ (pi_finset_measurable_equiv_tprod _ hl),
